@@ -1,10 +1,23 @@
-# Grab It
+<p align="center">
+  <img src="assets/images/icon.png" width="100" alt="Grab It logo">
+</p>
 
-**Give. Grab. Repeat.**
+<h1 align="center">Grab It</h1>
+<p align="center"><strong>Give. Grab. Repeat.</strong></p>
 
 Grab It is a local giving marketplace — a mobile app where people list items they no longer need and others claim them for free pickup. Listing, claiming, and pickup messaging stay free forever; optional paid upgrades (Grab It Pro) add extra listing photos, priority reserves, and a supporter badge.
 
 Built with [Expo](https://expo.dev) / React Native, [Clerk](https://clerk.com) for auth, [Supabase](https://supabase.com) for data and edge functions, and [RevenueCat](https://www.revenuecat.com) for subscriptions.
+
+## Screenshots
+
+| Onboarding | Home feed | Item detail |
+|---|---|---|
+| <img src="docs/screenshots/onboarding.jpg" width="220"> | <img src="docs/screenshots/home-feed.jpg" width="220"> | <img src="docs/screenshots/item-detail.jpg" width="220"> |
+
+| Location picker | Profile (Pro) | RevenueCat Customer Center |
+|---|---|---|
+| <img src="docs/screenshots/location-picker.jpg" width="220"> | <img src="docs/screenshots/profile-pro.jpg" width="220"> | <img src="docs/screenshots/revenuecat-manage.jpg" width="220"> |
 
 ## Features
 
