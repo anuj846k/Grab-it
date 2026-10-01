@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, PropsWithChildren } from 'react';
-import { Alert } from 'react-native';
 import { useAuth } from '@clerk/expo';
 import { useSupabase } from '@/utils/supabase';
 import { useRealtimeChat } from '@/hooks/useRealtimeChat';
 import type { Conversation, Message } from '@/types/chat';
 import * as ChatService from '@/services/chat';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 interface ChatContextValue {
   conversationId: string;
@@ -173,10 +173,10 @@ export function ChatProvider({ children, conversationId }: PropsWithChildren<{ c
     try {
       const ok = await ChatService.reportUser(supabase, profileId, otherParty.id, reason);
       if (!ok) throw new Error('Failed to report user');
-      Alert.alert('Report Submitted', 'Thank you. Our team will review this user shortly.');
+      AppAlert.alert('Report Submitted', 'Thank you. Our team will review this user shortly.');
     } catch (err) {
       console.error('Error reporting user:', err);
-      Alert.alert('Error', 'Could not submit report. Please try again later.');
+      AppAlert.alert('Error', 'Could not submit report. Please try again later.');
     } finally {
       setIsReporting(false);
     }
@@ -188,10 +188,10 @@ export function ChatProvider({ children, conversationId }: PropsWithChildren<{ c
       const ok = await ChatService.blockUser(supabase, profileId, otherParty.id);
       if (!ok) throw new Error('Failed to block user');
       setIsBlocked(true);
-      Alert.alert('User Blocked', 'You will no longer receive messages from this user.');
+      AppAlert.alert('User Blocked', 'You will no longer receive messages from this user.');
     } catch (err) {
       console.error('Error blocking user:', err);
-      Alert.alert('Error', 'Could not block user. Please try again later.');
+      AppAlert.alert('Error', 'Could not block user. Please try again later.');
     }
   };
 
@@ -201,16 +201,16 @@ export function ChatProvider({ children, conversationId }: PropsWithChildren<{ c
       const ok = await ChatService.unblockUser(supabase, profileId, otherParty.id);
       if (!ok) throw new Error('Failed to unblock user');
       setIsBlocked(false);
-      Alert.alert('User Unblocked', 'You can now exchange messages with this user.');
+      AppAlert.alert('User Unblocked', 'You can now exchange messages with this user.');
     } catch (err) {
       console.error('Error unblocking user:', err);
-      Alert.alert('Error', 'Could not unblock user. Please try again later.');
+      AppAlert.alert('Error', 'Could not unblock user. Please try again later.');
     }
   };
 
   const handleOptions = () => {
     if (isBlocked) {
-      Alert.alert(
+      AppAlert.alert(
         'Options',
         'What would you like to do?',
         [
@@ -222,7 +222,7 @@ export function ChatProvider({ children, conversationId }: PropsWithChildren<{ c
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       'Options',
       'What would you like to do?',
       [
@@ -230,7 +230,7 @@ export function ChatProvider({ children, conversationId }: PropsWithChildren<{ c
         { 
           text: 'Report User', 
           onPress: () => {
-            Alert.alert(
+            AppAlert.alert(
               'Report User',
               'Why are you reporting this user?',
               [

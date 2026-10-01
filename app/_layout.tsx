@@ -22,8 +22,9 @@ import {
   loginRevenueCat,
   logoutRevenueCat,
 } from '@/services/revenuecat';
+import { AppAlertProvider } from '@/components/ui/AppAlert';
 import { useUser } from '@clerk/expo';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -38,19 +39,23 @@ if (!publishableKey) {
 function InnerLayout({ fontsLoaded }: { fontsLoaded: boolean }) {
   // This hook requires ClerkProvider to be its parent
   useUserSync();
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const syncRef = useRef(Promise.resolve());
 
   useEffect(() => {
-    // Must configure before login/logout — this effect runs before the
-    // parent RootLayout effect (children fire first), so configuring here
-    // avoids calling Purchases.logIn/logOut before Purchases.configure.
+    // Clerk's isSignedIn is `undefined` (not `false`) until isLoaded is
+    // true — acting on it early would call logoutRevenueCat() on every
+    // cold start, even for an already-signed-in user.
+    if (!isLoaded) return;
+
     configureRevenueCat();
-    if (isSignedIn && user?.id) {
-      loginRevenueCat(user.id);
-    } else if (!isSignedIn) {
-      logoutRevenueCat();
-    }
-  }, [isSignedIn, user?.id]);
+    // Queue onto the same chain so a relaunch's logout (if any) can never
+    // race a concurrent login — RevenueCat has no ordering guarantee
+    // between overlapping logIn/logOut calls.
+    syncRef.current = syncRef.current.then(() =>
+      isSignedIn && user?.id ? loginRevenueCat(user.id) : logoutRevenueCat(),
+    );
+  }, [isLoaded, isSignedIn, user?.id]);
 
   return (
     <>
@@ -79,6 +84,7 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <SupabaseProvider>
         <InnerLayout fontsLoaded={fontsLoaded} />
+        <AppAlertProvider />
       </SupabaseProvider>
     </ClerkProvider>
   );

@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Alert,
   ActivityIndicator,
   DeviceEventEmitter,
 } from 'react-native';
@@ -26,6 +25,7 @@ import { decode } from 'base64-arraybuffer';
 import { colors } from '@/constants/theme';
 import { fontFamily } from '@/constants/typography';
 import { createClerkSupabaseClient } from '@/utils/supabase';
+import { AppAlert } from '@/components/ui/AppAlert';
 import { FormInput } from '@/components/post/form-input';
 import { LocationSelector } from '@/components/post/location-selector';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
@@ -107,7 +107,7 @@ export default function EditProfileScreen() {
   const handlePickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need access to your camera roll to change your photo.');
+      AppAlert.alert('Permission needed', 'We need access to your camera roll to change your photo.');
       return;
     }
 
@@ -132,7 +132,7 @@ export default function EditProfileScreen() {
       setIsSaving(true);
       const token = await getTokenRef.current({ template: 'supabase' });
       if (!token) {
-        Alert.alert('Error', 'Authentication error. Please log in again.');
+        AppAlert.alert('Error', 'Authentication error. Please log in again.');
         return;
       }
 
@@ -152,7 +152,7 @@ export default function EditProfileScreen() {
 
         if (uploadError) {
           console.error('Avatar upload error:', uploadError);
-          Alert.alert('Upload Failed', 'Failed to upload profile photo.');
+          AppAlert.alert('Upload Failed', 'Failed to upload profile photo.');
           return;
         }
 
@@ -182,16 +182,16 @@ export default function EditProfileScreen() {
 
       if (dbError) {
         console.error('Database error:', dbError);
-        Alert.alert('Error', 'Failed to save changes.');
+        AppAlert.alert('Error', 'Failed to save changes.');
         return;
       }
 
-      Alert.alert('Saved!', 'Your profile has been updated.', [
+      AppAlert.alert('Saved!', 'Your profile has been updated.', [
         { text: 'OK', onPress: goBack },
       ]);
     } catch (err: any) {
       console.error('Error saving profile:', err);
-      Alert.alert('Error', err.message || 'Something went wrong.');
+      AppAlert.alert('Error', err.message || 'Something went wrong.');
     } finally {
       setIsSaving(false);
     }

@@ -6,7 +6,6 @@ import {
   Text,
   Pressable,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { createClerkSupabaseClient } from '@/utils/supabase';
 import { Listing } from '@/types/listing';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { ListingsSkeleton } from '@/components/skeletons/ListingsSkeleton';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 interface FavoriteListing extends Listing {
   status: 'active' | 'available' | 'claimed' | 'pending';
@@ -111,7 +111,7 @@ export default function MyFavoritesScreen() {
       }
     } catch (err) {
       console.error('Error fetching favorites:', err);
-      Alert.alert('Error', 'Failed to load your favorites');
+      AppAlert.alert('Error', 'Failed to load your favorites');
     } finally {
       isFetchingRef.current = false;
       setIsLoading(false);

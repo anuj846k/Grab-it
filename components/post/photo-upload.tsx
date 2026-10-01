@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '@/constants/theme';
 import { fontFamily } from '@/constants/typography';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 export interface PhotoData {
   uri: string;
@@ -23,13 +24,13 @@ export function PhotoUpload({ images, onAddImages, onRemoveImage, maxImages = 5 
   
   const takePhoto = async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Limit Reached', `You can only upload up to ${maxImages} images.`);
+      AppAlert.alert('Limit Reached', `You can only upload up to ${maxImages} images.`);
       return;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need camera access to take photos.');
+      AppAlert.alert('Permission needed', 'We need camera access to take photos.');
       return;
     }
 
@@ -51,13 +52,13 @@ export function PhotoUpload({ images, onAddImages, onRemoveImage, maxImages = 5 
 
   const pickImages = async () => {
     if (images.length >= maxImages) {
-      Alert.alert('Limit Reached', `You can only upload up to ${maxImages} images.`);
+      AppAlert.alert('Limit Reached', `You can only upload up to ${maxImages} images.`);
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need access to your camera roll to upload photos.');
+      AppAlert.alert('Permission needed', 'We need access to your camera roll to upload photos.');
       return;
     }
 
@@ -80,7 +81,7 @@ export function PhotoUpload({ images, onAddImages, onRemoveImage, maxImages = 5 
   };
 
   const handleUploadPress = () => {
-    Alert.alert('Add Photo', 'Choose how you want to add a photo', [
+    AppAlert.alert('Add Photo', 'Choose how you want to add a photo', [
       { text: 'Take Photo', onPress: takePhoto },
       { text: 'Choose from Gallery', onPress: pickImages },
       { text: 'Cancel', style: 'cancel' },

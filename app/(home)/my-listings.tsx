@@ -6,7 +6,6 @@ import {
   Text,
   Pressable,
   Image,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { createClerkSupabaseClient } from '@/utils/supabase';
 import { Listing } from '@/types/listing';
 import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { ListingsSkeleton } from '@/components/skeletons/ListingsSkeleton';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 interface MyListing extends Listing {
   status: 'active' | 'available' | 'claimed' | 'pending';
@@ -108,7 +108,7 @@ export default function MyListingsScreen() {
       }
     } catch (err) {
       console.error('Error fetching my listings:', err);
-      Alert.alert('Error', 'Failed to load your listings');
+      AppAlert.alert('Error', 'Failed to load your listings');
     } finally {
       isFetchingRef.current = false;
       setIsLoading(false);
@@ -122,7 +122,7 @@ export default function MyListingsScreen() {
   );
 
   const handleDelete = (listingId: string) => {
-    Alert.alert(
+    AppAlert.alert(
       'Delete Listing',
       'Are you sure you want to delete this listing? This action cannot be undone.',
       [
@@ -149,7 +149,7 @@ export default function MyListingsScreen() {
               );
             } catch (err) {
               console.error('Error deleting listing:', err);
-              Alert.alert('Error', 'Failed to delete listing');
+              AppAlert.alert('Error', 'Failed to delete listing');
             }
           },
         },
@@ -195,7 +195,7 @@ export default function MyListingsScreen() {
       );
     } catch (err) {
       console.error('Error marking as claimed:', err);
-      Alert.alert('Error', 'Failed to mark listing as claimed');
+      AppAlert.alert('Error', 'Failed to mark listing as claimed');
     }
   };
 

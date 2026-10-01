@@ -4,7 +4,9 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Alert,
+  TextInput,
+  Keyboard,
+  Linking,
   ActivityIndicator,
   DeviceEventEmitter,
   AppState,
@@ -23,12 +25,39 @@ import { colors } from '@/constants/theme';
 import { fontFamily } from '@/constants/typography';
 import { normalizePickupLocation } from '@/utils/location';
 import { createClerkSupabaseClient } from '@/utils/supabase';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 const INITIAL_REGION = {
   latitude: 28.6273928,
   longitude: 77.3726929,
   latitudeDelta: 0.0922,
   longitudeDelta: 0.0421,
+};
+
+interface PlaceSuggestion {
+  placeId: string;
+  description: string;
+}
+
+const fetchPlaceSuggestions = async (query: string): Promise<PlaceSuggestion[]> => {
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return [];
+
+  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${apiKey}`;
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (data.status !== 'OK') {
+    if (data.status !== 'ZERO_RESULTS') {
+      console.warn('[LocationScreen] Places Autocomplete error:', data.status, data.error_message);
+    }
+    return [];
+  }
+
+  return (data.predictions || []).map((p: { place_id: string; description: string }) => ({
+    placeId: p.place_id,
+    description: p.description,
+  }));
 };
 
 const buildGoogleMapsUrl = ({ latitude, longitude }: Region) =>
@@ -74,25 +103,67 @@ export default function LocationSelectorScreen() {
   const wasPermissionDeniedRef = useRef<boolean>(false);
   const appStateRef = useRef(AppState.currentState);
   const { getToken, isLoaded, userId } = useAuth();
+  const getTokenRef = useRef(getToken);
+  getTokenRef.current = getToken;
 
   const [region, setRegion] = useState<Region>(INITIAL_REGION);
   const [address, setAddress] = useState<string>('Locating...');
   const [isLocating, setIsLocating] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [canAskAgain, setCanAskAgain] = useState(true);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const suggestionsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const requestLocationPermission = useCallback(async () => {
+    let { status, canAskAgain: canAsk } =
+      await Location.getForegroundPermissionsAsync();
+
+    if (status !== 'granted' && canAsk) {
+      ({ status, canAskAgain: canAsk } =
+        await Location.requestForegroundPermissionsAsync());
+    }
+
+    if (status === 'granted') {
+      setPermissionDenied(false);
+      wasPermissionDeniedRef.current = false;
+      return { granted: true, canAskAgain: canAsk };
+    }
+
+    setPermissionDenied(true);
+    setCanAskAgain(canAsk);
+    wasPermissionDeniedRef.current = true;
+
+    if (!canAsk) {
+      AppAlert.alert(
+        'Location Access Needed',
+        'Enable location access in Settings to use this feature.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
+      );
+    }
+    return { granted: false, canAskAgain: canAsk };
+  }, []);
 
   const initializeLocation = useCallback(async () => {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setAddress('Permission to access location was denied');
+    const { granted, canAskAgain: canAsk } = await requestLocationPermission();
+
+    if (!granted) {
+      setAddress(
+        canAsk ? 'Location permission needed' : 'Location permission denied',
+      );
       setIsLocating(false);
-      wasPermissionDeniedRef.current = true;
       return;
     }
-    wasPermissionDeniedRef.current = false;
 
     try {
       if (userId) {
-        const token = await getToken({ template: 'supabase' });
+        const token = await getTokenRef.current({ template: 'supabase' });
 
         if (token) {
           const supabase = createClerkSupabaseClient(token);
@@ -147,7 +218,7 @@ export default function LocationSelectorScreen() {
       console.error('Error getting location:', error);
       setIsLocating(false);
     }
-  }, [getToken, userId]);
+  }, [userId, requestLocationPermission]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -226,14 +297,8 @@ export default function LocationSelectorScreen() {
 
   const centerOnUser = async () => {
     try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Location Denied',
-          'Enable location in Settings to center on your position.',
-        );
-        return;
-      }
+      const { granted } = await requestLocationPermission();
+      if (!granted) return;
 
       setIsLocating(true);
       let location = await Location.getLastKnownPositionAsync({});
@@ -264,6 +329,74 @@ export default function LocationSelectorScreen() {
       setIsLocating(false);
     }
   };
+
+  const jumpToAddress = async (query: string) => {
+    setIsSearching(true);
+    try {
+      const results = await Location.geocodeAsync(query);
+      if (results.length === 0) {
+        AppAlert.alert('Not Found', `Could not find "${query}". Try a different search.`);
+        return;
+      }
+
+      const { latitude, longitude } = results[0];
+      const newRegion = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      setIsLocating(true);
+      mapRef.current?.animateToRegion(newRegion, 1000);
+    } catch (error) {
+      console.error('Geocode search error:', error);
+      AppAlert.alert('Search Failed', 'Could not search for that location. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    const query = searchQuery.trim();
+    if (!query || isSearching) return;
+
+    Keyboard.dismiss();
+    setSuggestions([]);
+    await jumpToAddress(query);
+  };
+
+  const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
+    Keyboard.dismiss();
+    setSearchQuery(suggestion.description);
+    setSuggestions([]);
+    await jumpToAddress(suggestion.description);
+  };
+
+  useEffect(() => {
+    if (suggestionsDebounceRef.current) clearTimeout(suggestionsDebounceRef.current);
+
+    const query = searchQuery.trim();
+    if (query.length < 3) {
+      setSuggestions([]);
+      setIsLoadingSuggestions(false);
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+    suggestionsDebounceRef.current = setTimeout(async () => {
+      try {
+        const results = await fetchPlaceSuggestions(query);
+        setSuggestions(results);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    }, 350);
+
+    return () => {
+      if (suggestionsDebounceRef.current) clearTimeout(suggestionsDebounceRef.current);
+    };
+  }, [searchQuery]);
 
   const handleConfirm = async () => {
     if (!userId) return;
@@ -335,6 +468,53 @@ export default function LocationSelectorScreen() {
           <Text style={styles.headerTitle}>Select Location</Text>
           <View style={{ width: 40 }} />
         </View>
+
+        <View style={styles.searchBar}>
+          <Ionicons name='search' size={18} color={colors.onSurfaceVariant} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder='Search for an address or city'
+            placeholderTextColor={colors.onSurfaceVariant}
+            returnKeyType='search'
+            onSubmitEditing={handleSearch}
+          />
+          {isSearching || isLoadingSuggestions ? (
+            <ActivityIndicator size='small' color={colors.primary} />
+          ) : searchQuery.length > 0 ? (
+            <Pressable
+              onPress={() => {
+                setSearchQuery('');
+                setSuggestions([]);
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name='close-circle' size={18} color={colors.onSurfaceVariant} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {suggestions.length > 0 && (
+          <View style={styles.suggestionsDropdown}>
+            {suggestions.map((suggestion, index) => (
+              <Pressable
+                key={suggestion.placeId}
+                style={({ pressed }) => [
+                  styles.suggestionRow,
+                  index === suggestions.length - 1 && styles.suggestionRowLast,
+                  pressed && styles.suggestionRowPressed,
+                ]}
+                onPress={() => handleSelectSuggestion(suggestion)}
+              >
+                <Ionicons name='location-outline' size={16} color={colors.onSurfaceVariant} />
+                <Text style={styles.suggestionText} numberOfLines={1}>
+                  {suggestion.description}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </SafeAreaView>
 
       <Pressable
@@ -365,21 +545,37 @@ export default function LocationSelectorScreen() {
           )}
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.confirmButton,
-            pressed && styles.confirmButtonPressed,
-            (isSaving || isLocating) && { opacity: 0.7 },
-          ]}
-          onPress={handleConfirm}
-          disabled={isSaving || isLocating || address === 'Locating...'}
-        >
-          {isSaving ? (
-            <ActivityIndicator color='#ffffff' />
-          ) : (
-            <Text style={styles.confirmButtonText}>Confirm Location</Text>
-          )}
-        </Pressable>
+        {permissionDenied ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.confirmButton,
+              pressed && styles.confirmButtonPressed,
+            ]}
+            onPress={() =>
+              canAskAgain ? requestLocationPermission() : Linking.openSettings()
+            }
+          >
+            <Text style={styles.confirmButtonText}>
+              {canAskAgain ? 'Enable Location' : 'Open Settings'}
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.confirmButton,
+              pressed && styles.confirmButtonPressed,
+              (isSaving || isLocating) && { opacity: 0.7 },
+            ]}
+            onPress={handleConfirm}
+            disabled={isSaving || isLocating || address === 'Locating...'}
+          >
+            {isSaving ? (
+              <ActivityIndicator color='#ffffff' />
+            ) : (
+              <Text style={styles.confirmButtonText}>Confirm Location</Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -444,6 +640,58 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headlineSm,
     fontSize: 18,
     fontWeight: 'bold',
+    color: colors.onSurface,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    color: colors.onSurface,
+    padding: 0,
+  },
+  suggestionsDropdown: {
+    marginHorizontal: 16,
+    marginTop: -4,
+    marginBottom: 12,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.outlineVariant,
+  },
+  suggestionRowLast: {
+    borderBottomWidth: 0,
+  },
+  suggestionRowPressed: {
+    backgroundColor: colors.surfaceContainer,
+  },
+  suggestionText: {
+    flex: 1,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
     color: colors.onSurface,
   },
   fab: {

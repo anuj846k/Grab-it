@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
   ActivityIndicator,
   Image,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { useBackNavigation } from '@/hooks/useBackNavigation';
 import { fontFamily } from '@/constants/typography';
 import { createClerkSupabaseClient } from '@/utils/supabase';
 import { RequestsSkeleton } from '@/components/skeletons/RequestsSkeleton';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 interface PendingClaim {
   id: string;
@@ -150,7 +150,7 @@ export default function RequestsScreen() {
 
       setClaims((prev) => prev.filter((c) => c.id !== claim.id));
 
-      Alert.alert('Accepted', `You accepted "${claim.listing?.title || 'this item'}". Chat is now open.`, [
+      AppAlert.alert('Accepted', `You accepted "${claim.listing?.title || 'this item'}". Chat is now open.`, [
         {
           text: 'Open Chat',
           onPress: () => router.push(`/chat/${conversation_id}` as any),
@@ -159,7 +159,7 @@ export default function RequestsScreen() {
       ]);
     } catch (err) {
       console.error('Error accepting claim:', err);
-      Alert.alert('Error', 'Failed to accept this request.');
+      AppAlert.alert('Error', 'Failed to accept this request.');
     } finally {
       setProcessingAction((prev) => {
         const next = { ...prev };
@@ -188,7 +188,7 @@ export default function RequestsScreen() {
       setClaims((prev) => prev.filter((c) => c.id !== claim.id));
     } catch (err) {
       console.error('Error rejecting claim:', err);
-      Alert.alert('Error', 'Failed to reject this request.');
+      AppAlert.alert('Error', 'Failed to reject this request.');
     } finally {
       setProcessingAction((prev) => {
         const next = { ...prev };

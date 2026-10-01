@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Text, Alert, Animated, Pressable } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, Animated, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,7 @@ import { getTimeAgo } from '@/utils/date';
 import { normalizeImageUrls } from '@/utils/image-urls';
 import { Listing } from '@/types/listing';
 import { FEATURED_LISTINGS, RECENT_LISTINGS, NEARBY_LISTINGS } from '@/utils/demo-data';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 import { ItemImageHeader } from '@/components/item/item-image-header';
 import { ItemInfoHeader } from '@/components/item/item-info-header';
@@ -218,7 +219,7 @@ export default function ItemDetailScreen() {
         .single();
 
       if (!profile) {
-        Alert.alert('Error', 'Could not verify your account.');
+        AppAlert.alert('Error', 'Could not verify your account.');
         return;
       }
 
@@ -232,7 +233,7 @@ export default function ItemDetailScreen() {
 
       if (claimError) {
         if (claimError.code === '23505') {
-          Alert.alert('Already Requested', 'You have already requested this item.');
+          AppAlert.alert('Already Requested', 'You have already requested this item.');
         } else {
           throw claimError;
         }
@@ -246,7 +247,7 @@ export default function ItemDetailScreen() {
       });
     } catch (err: any) {
       console.error('Error claiming item:', err);
-      Alert.alert('Error', 'Failed to request this item. Please try again.');
+      AppAlert.alert('Error', 'Failed to request this item. Please try again.');
     } finally {
       setIsClaiming(false);
     }
@@ -293,7 +294,7 @@ export default function ItemDetailScreen() {
       }
     } catch (err) {
       console.error('Error toggling favorite:', err);
-      Alert.alert('Error', 'Could not update favorites. Please try again.');
+      AppAlert.alert('Error', 'Could not update favorites. Please try again.');
     } finally {
       setIsTogglingFavorite(false);
     }
@@ -306,11 +307,11 @@ export default function ItemDetailScreen() {
     }
 
     if (isOwner) {
-      Alert.alert('Cannot Report', 'You cannot report your own listing.');
+      AppAlert.alert('Cannot Report', 'You cannot report your own listing.');
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       'Report Listing',
       'Why are you reporting this listing?',
       [
@@ -355,10 +356,10 @@ export default function ItemDetailScreen() {
 
       if (error) throw error;
 
-      Alert.alert('Report Submitted', 'Thank you. Our team will review this listing shortly.');
+      AppAlert.alert('Report Submitted', 'Thank you. Our team will review this listing shortly.');
     } catch (err) {
       console.error('Error reporting listing:', err);
-      Alert.alert('Error', 'Could not submit report. Please try again later.');
+      AppAlert.alert('Error', 'Could not submit report. Please try again later.');
     } finally {
       setIsReporting(false);
     }

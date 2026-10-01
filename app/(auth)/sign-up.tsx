@@ -1,5 +1,6 @@
 import { AuthScreenLayout } from '@/components/auth/auth-screen-layout';
 import { PasswordInput } from '@/components/auth/password-input';
+import { AppAlert } from '@/components/ui/AppAlert';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
 import { authScreenStyles as s } from '@/constants/auth-screen-styles';
@@ -13,7 +14,6 @@ import {
   Text,
   TextInput,
   View,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 
@@ -44,7 +44,7 @@ export default function Page() {
       });
       if (error) {
         console.error(JSON.stringify(error, null, 2));
-        Alert.alert(
+        AppAlert.alert(
           'Sign Up Error',
           error.message ||
             'Something went wrong while signing up. Please try again.',
@@ -56,7 +56,7 @@ export default function Page() {
       setShowVerify(true);
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
-      Alert.alert(
+      AppAlert.alert(
         'Sign Up Error',
         err.message ||
           err.toString() ||
@@ -86,11 +86,11 @@ export default function Page() {
         });
       } else {
         console.error('Sign-up attempt not complete:', signUp);
-        Alert.alert('Error', 'Sign-up verification failed. Please try again.');
+        AppAlert.alert('Error', 'Sign-up verification failed. Please try again.');
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
-      Alert.alert(
+      AppAlert.alert(
         'Verification Error',
         err.message || err.toString() || 'An unexpected error occurred.',
       );

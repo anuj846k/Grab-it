@@ -1,4 +1,7 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# EAS Build needs app.json and eas.json to build at all, even though
+# they're gitignored (they contain embedded API keys we don't want in the
+# public repo). .easignore takes priority over .gitignore for EAS's own
+# upload, so mirror .gitignore here and then un-ignore those two files.
 
 # dependencies
 node_modules/
@@ -50,11 +53,6 @@ app-example
 # Supabase CLI local state
 supabase/.temp
 
-# Contains embedded API keys — kept out of the public repo.
-# EAS Build still gets these via .easignore (which un-ignores them).
-app.json
-eas.json
-
-# Local build artifacts
-*.apk
-*.aab
+# Needed by EAS Build even though they're gitignored — must be last.
+!app.json
+!eas.json

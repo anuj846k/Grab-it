@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
@@ -10,12 +10,24 @@ export const GRABIT_ENTITLEMENT_ID = 'Grabit Pro';
 export const FREE_PHOTO_LIMIT = 3;
 export const PRO_PHOTO_LIMIT = 10;
 
-// Test Store key from dashboard. Public SDK key, safe to ship in dev.
-// Prefer EXPO_PUBLIC_REVENUECAT_ANDROID from env when set.
+// Test Store key from dashboard. Only valid outside real store builds —
+// RevenueCat crashes/rejects it if it ever ends up in a release build.
 const FALLBACK_TEST_KEY = 'test_oSsYpLBfFYXXoLzQsWSDZxiVLvc';
 
+// True when running inside Expo Go. Native paywall UI has no effect here
+// (Preview API mode) — real purchases need an EAS dev build.
+export function isExpoGo(): boolean {
+  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+}
+
 function getApiKey(): string | null {
-  return process.env.EXPO_PUBLIC_REVENUECAT_ANDROID ?? FALLBACK_TEST_KEY;
+  const key = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID;
+  if (key) return key;
+  if (__DEV__ || isExpoGo()) return FALLBACK_TEST_KEY;
+  console.error(
+    '[RevenueCat] EXPO_PUBLIC_REVENUECAT_ANDROID is missing in a release build — refusing to fall back to the Test Store key.',
+  );
+  return null;
 }
 
 let configured = false;
@@ -27,9 +39,13 @@ export function configureRevenueCat() {
     console.warn('[RevenueCat] No API key set');
     return;
   }
-  Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-  Purchases.configure({ apiKey });
-  configured = true;
+  try {
+    Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.VERBOSE : LOG_LEVEL.ERROR);
+    Purchases.configure({ apiKey });
+    configured = true;
+  } catch (e) {
+    console.warn('[RevenueCat] configure failed', e);
+  }
 }
 
 export async function loginRevenueCat(appUserId: string) {
@@ -58,12 +74,6 @@ export async function isGrabitPro(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-// True when running inside Expo Go. Native paywall UI has no effect here
-// (Preview API mode) — real purchases need an EAS dev build.
-export function isExpoGo(): boolean {
-  return Constants.appOwnership === 'expo';
 }
 
 // Presents dashboard paywall for current offering. Returns true if purchased/restored.

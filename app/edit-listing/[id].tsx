@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Alert,
   ActivityIndicator,
   DeviceEventEmitter,
 } from 'react-native';
@@ -29,6 +28,7 @@ import { editFormSchema, getValidationMessage } from '@/utils/post-validation';
 import { getCityFromNeighborhood } from '@/utils/location';
 import { useIsGrabitPro } from '@/hooks/useIsGrabitPro';
 import { FREE_PHOTO_LIMIT, PRO_PHOTO_LIMIT } from '@/services/revenuecat';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 import { PhotoUpload, type PhotoData } from '@/components/post/photo-upload';
 import { FormInput } from '@/components/post/form-input';
@@ -182,7 +182,7 @@ export default function EditListingScreen() {
     if (!userId || !id) return;
 
     if (!formValidation.success) {
-      Alert.alert('Complete the form', getValidationMessage(formValidation.error));
+      AppAlert.alert('Complete the form', getValidationMessage(formValidation.error));
       return;
     }
 
@@ -190,7 +190,7 @@ export default function EditListingScreen() {
       setIsSaving(true);
       const token = await getToken({ template: 'supabase' });
       if (!token) {
-        Alert.alert('Error', 'Authentication token missing. Please log in again.');
+        AppAlert.alert('Error', 'Authentication token missing. Please log in again.');
         return;
       }
 
@@ -229,7 +229,7 @@ export default function EditListingScreen() {
 
         if (uploadError) {
           console.error('Storage upload error:', uploadError);
-          Alert.alert('Upload Failed', 'Failed to upload images.');
+          AppAlert.alert('Upload Failed', 'Failed to upload images.');
           return;
         }
 
@@ -257,16 +257,16 @@ export default function EditListingScreen() {
 
       if (dbError) {
         console.error('Database error:', dbError);
-        Alert.alert('Error', 'Failed to save changes.');
+        AppAlert.alert('Error', 'Failed to save changes.');
         return;
       }
 
-      Alert.alert('Saved!', 'Your listing has been updated.', [
+      AppAlert.alert('Saved!', 'Your listing has been updated.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: any) {
       console.error('Error saving listing:', err);
-      Alert.alert('Error', err.message || 'Something went wrong.');
+      AppAlert.alert('Error', err.message || 'Something went wrong.');
     } finally {
       setIsSaving(false);
     }

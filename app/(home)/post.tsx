@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -28,6 +27,7 @@ import {
 import { getValidationMessage, postFormSchema } from '@/utils/post-validation';
 import { createClerkSupabaseClient } from '@/utils/supabase';
 import { FREE_PHOTO_LIMIT, PRO_PHOTO_LIMIT } from '@/services/revenuecat';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 import { PhotoUpload, type PhotoData } from '@/components/post/photo-upload';
 import { FormInput } from '@/components/post/form-input';
@@ -100,12 +100,12 @@ export default function PostScreen() {
 
   const handleSubmit = async () => {
     if (!userId) {
-      Alert.alert('Error', 'Please sign in before posting.');
+      AppAlert.alert('Error', 'Please sign in before posting.');
       return;
     }
 
     if (!formValidation.success) {
-      Alert.alert(
+      AppAlert.alert(
         'Complete the form',
         getValidationMessage(formValidation.error),
       );
@@ -117,7 +117,7 @@ export default function PostScreen() {
       const token = await getToken({ template: 'supabase' });
 
       if (!token) {
-        Alert.alert(
+        AppAlert.alert(
           'Error',
           'Authentication token missing. Please log in again.',
         );
@@ -138,16 +138,16 @@ export default function PostScreen() {
         userId,
       });
 
-      Alert.alert('Success!', 'Your item is now live.', [
+      AppAlert.alert('Success!', 'Your item is now live.', [
         { text: 'Awesome', onPress: () => router.back() },
       ]);
     } catch (err: any) {
       if (err instanceof PostValidationError) {
-        Alert.alert('Complete the form', err.message);
+        AppAlert.alert('Complete the form', err.message);
         return;
       }
 
-      Alert.alert('Upload Failed', err.message || 'Something went wrong.');
+      AppAlert.alert('Upload Failed', err.message || 'Something went wrong.');
     } finally {
       setIsSubmitting(false);
     }

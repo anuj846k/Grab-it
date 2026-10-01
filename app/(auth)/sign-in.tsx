@@ -1,6 +1,7 @@
 import { AuthScreenLayout } from '@/components/auth/auth-screen-layout';
 import { PasswordInput } from '@/components/auth/password-input';
 import { GoogleSignInButton } from '@/components/auth/google-sign-in-button';
+import { AppAlert } from '@/components/ui/AppAlert';
 import { authScreenStyles as s } from '@/constants/auth-screen-styles';
 import { colors } from '@/constants/theme';
 import { fontFamily } from '@/constants/typography';
@@ -8,7 +9,7 @@ import { useSignIn } from '@clerk/expo';
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, Link, useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, Alert, ActivityIndicator, Linking } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, ActivityIndicator, Linking } from 'react-native';
 
 const placeholderColor = colors.onSurfaceVariant;
 
@@ -32,7 +33,7 @@ export default function Page() {
       });
       if (error) {
         console.error(JSON.stringify(error, null, 2));
-        Alert.alert('Sign In Error', error.message || 'Something went wrong while signing in. Please check your credentials and try again.');
+        AppAlert.alert('Sign In Error', error.message || 'Something went wrong while signing in. Please check your credentials and try again.');
         return;
       }
 
@@ -59,11 +60,11 @@ export default function Page() {
         }
       } else {
         console.error('Sign-in attempt not complete:', signIn);
-        Alert.alert('Error', 'Sign-in attempt not complete. Please try again.');
+        AppAlert.alert('Error', 'Sign-in attempt not complete. Please try again.');
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
-      Alert.alert('Sign In Error', err.message || err.toString() || 'An unexpected error occurred during sign in.');
+      AppAlert.alert('Sign In Error', err.message || err.toString() || 'An unexpected error occurred during sign in.');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +91,7 @@ export default function Page() {
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
-      Alert.alert('Verification Error', err.message || err.toString() || 'An unexpected error occurred.');
+      AppAlert.alert('Verification Error', err.message || err.toString() || 'An unexpected error occurred.');
     } finally {
       setIsVerifying(false);
     }

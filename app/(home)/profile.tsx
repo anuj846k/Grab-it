@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Alert,
   Linking,
   Pressable,
 } from 'react-native';
@@ -29,6 +28,7 @@ import {
   presentGrabitPaywall,
   restoreGrabitPurchases,
 } from '@/services/revenuecat';
+import { AppAlert } from '@/components/ui/AppAlert';
 
 export default function ProfileScreen() {
   const { signOut, getToken, userId } = useAuth();
@@ -99,7 +99,7 @@ export default function ProfileScreen() {
   const handleUpgrade = useCallback(async () => {
     if (isPaywallBusy) return;
     if (isExpoGo()) {
-      Alert.alert(
+      AppAlert.alert(
         'Dev build required',
         'Test purchases need an EAS dev build — Expo Go runs RevenueCat in preview mode with no real paywall. Run: eas build --profile development',
       );
@@ -112,22 +112,28 @@ export default function ProfileScreen() {
       else setIsPro(await isGrabitPro());
     } catch (err) {
       console.warn('[Pro] paywall failed', err);
-      Alert.alert('Purchase failed', 'Could not complete the purchase. Try again in a dev build.');
+      AppAlert.alert('Purchase failed', 'Could not complete the purchase. Try again in a dev build.');
     } finally {
       setIsPaywallBusy(false);
     }
   }, [isPaywallBusy]);
 
   const handleRestore = useCallback(async () => {
-    const restored = await restoreGrabitPurchases();
-    setIsPro(restored);
-    if (!restored) Alert.alert('No purchases found', 'No Grab It Pro purchase to restore.');
-  }, []);
+    if (isPaywallBusy) return;
+    setIsPaywallBusy(true);
+    try {
+      const restored = await restoreGrabitPurchases();
+      setIsPro(restored);
+      if (!restored) AppAlert.alert('No purchases found', 'No Grab It Pro purchase to restore.');
+    } finally {
+      setIsPaywallBusy(false);
+    }
+  }, [isPaywallBusy]);
 
   const handleManage = useCallback(async () => {
     if (isPaywallBusy) return;
     if (isExpoGo()) {
-      Alert.alert(
+      AppAlert.alert(
         'Dev build required',
         'Subscription management needs an EAS dev build — Expo Go runs RevenueCat in preview mode.',
       );
@@ -153,7 +159,7 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    AppAlert.alert(
       'Delete Account',
       'Are you absolutely sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
       [
@@ -190,7 +196,7 @@ export default function ProfileScreen() {
               
             } catch (err) {
               console.error('Error deleting account:', err);
-              Alert.alert('Error', 'Could not delete your account. Please try again.');
+              AppAlert.alert('Error', 'Could not delete your account. Please try again.');
               setIsLoading(false);
             }
           },
@@ -264,7 +270,7 @@ export default function ProfileScreen() {
               <Text style={styles.proCta}>{isPro ? 'MANAGE' : 'TRY'}</Text>
             </Pressable>
             {!isPro && (
-              <Pressable onPress={handleRestore} style={styles.restoreRow}>
+              <Pressable onPress={handleRestore} disabled={isPaywallBusy} style={styles.restoreRow}>
                 <Text style={styles.restoreText}>Restore purchases</Text>
               </Pressable>
             )}

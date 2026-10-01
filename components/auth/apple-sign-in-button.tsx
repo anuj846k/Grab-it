@@ -1,10 +1,10 @@
 import { colors } from '@/constants/theme';
 import { fontFamily } from '@/constants/typography';
+import { AppAlert } from '@/components/ui/AppAlert';
 import { useOAuth } from '@clerk/expo';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import * as Linking from 'expo-linking';
 import {
-  Alert,
   Platform,
   Pressable,
   StyleSheet,
@@ -58,7 +58,7 @@ export function AppleSignInButton({
       }
       const message =
         err instanceof Error ? err.message : 'An error occurred during Apple sign-in';
-      Alert.alert('Error', message);
+      AppAlert.alert('Error', message);
       console.error('Sign in with Apple:', err);
     }
   };
